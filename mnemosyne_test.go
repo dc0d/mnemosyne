@@ -13,7 +13,7 @@ func TestCache(t *testing.T) {
 	t.Run(`should cache when calling GetOrInit`, func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
 		timeSource = func() time.Time { return now }
-		sut := NewCache()
+		sut := New()
 
 		expectedValue := val1
 		actualValue := sut.GetOrInit(key1, func() (TV, time.Duration) {
@@ -26,7 +26,7 @@ func TestCache(t *testing.T) {
 	t.Run(`should not overwrite after cached by calling GetOrInit`, func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
 		timeSource = func() time.Time { return now }
-		sut := NewCache()
+		sut := New()
 
 		initialValue := val1
 		actualValue := sut.GetOrInit(key1, func() (TV, time.Duration) {
@@ -45,7 +45,7 @@ func TestCache(t *testing.T) {
 
 	t.Run(`should evict expired entry by calling Get - initialized by GetOrInit`, func(t *testing.T) {
 		timeSource = time.Now
-		sut := NewCache()
+		sut := New()
 
 		initialValue := val1
 		sut.GetOrInit(key1, func() (TV, time.Duration) {
@@ -54,7 +54,7 @@ func TestCache(t *testing.T) {
 
 		assert.Eventually(t, func() bool {
 			result, _ := sut.Get(key1)
-			return result == zeroData
+			return result == nil
 		}, time.Millisecond*300, time.Millisecond*20)
 
 		assert.Eventually(t, func() bool {
@@ -66,7 +66,7 @@ func TestCache(t *testing.T) {
 	t.Run(`should cache when calling Put`, func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
 		timeSource = func() time.Time { return now }
-		sut := NewCache()
+		sut := New()
 
 		expectedValue := val1
 		sut.Put(key1, func() (TV, time.Duration) {
@@ -79,7 +79,7 @@ func TestCache(t *testing.T) {
 	t.Run(`should overwrite after cached by calling Put`, func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
 		timeSource = func() time.Time { return now }
-		sut := NewCache()
+		sut := New()
 
 		initialValue := val1
 		sut.Put(key1, func() (TV, time.Duration) {
@@ -98,7 +98,7 @@ func TestCache(t *testing.T) {
 
 	t.Run(`should evict expired entry by calling Get - initialized by Put`, func(t *testing.T) {
 		timeSource = time.Now
-		sut := NewCache()
+		sut := New()
 
 		initialValue := val1
 		sut.Put(key1, func() (TV, time.Duration) {
@@ -112,14 +112,14 @@ func TestCache(t *testing.T) {
 
 		assert.Eventually(t, func() bool {
 			result, _ := sut.Get(key1)
-			return result == zeroData
+			return result == nil
 		}, time.Millisecond*300, time.Millisecond*20)
 	})
 
 	t.Run(`should return not found when not cached when calling Get`, func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
 		timeSource = func() time.Time { return now }
-		sut := NewCache()
+		sut := New()
 
 		_, found := sut.Get(key1)
 
@@ -129,7 +129,7 @@ func TestCache(t *testing.T) {
 	t.Run(`should find the entry when already cached when calling Get`, func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
 		timeSource = func() time.Time { return now }
-		sut := NewCache()
+		sut := New()
 
 		expectedValue := val1
 		sut.Put(key1, func() (TV, time.Duration) {
@@ -145,7 +145,7 @@ func TestCache(t *testing.T) {
 	t.Run(`should return not found when entry is removed when calling Get`, func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
 		timeSource = func() time.Time { return now }
-		sut := NewCache()
+		sut := New()
 
 		expectedValue := val1
 		sut.Put(key1, func() (TV, time.Duration) {
@@ -162,13 +162,13 @@ func TestCache(t *testing.T) {
 		val, found = sut.Get(key1)
 
 		assert.False(t, found)
-		assert.Equal(t, zeroData, val)
+		assert.Equal(t, nil, val)
 	})
 
 	t.Run(`should be fine calling Remove with a non-existing key`, func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
 		timeSource = func() time.Time { return now }
-		sut := NewCache()
+		sut := New()
 
 		sut.Remove(key1)
 
@@ -187,12 +187,12 @@ func TestCache(t *testing.T) {
 		val, found = sut.Get(key1)
 
 		assert.False(t, found)
-		assert.Equal(t, zeroData, val)
+		assert.Equal(t, nil, val)
 	})
 
 	t.Run(`should evict expired entries`, func(t *testing.T) {
 		timeSource = time.Now
-		sut := NewCache()
+		sut := New()
 
 		for i := 1; i <= 10; i++ {
 			key := fmt.Sprint(i)
@@ -226,9 +226,8 @@ const (
 )
 
 var (
-	zeroData struct{ Message string }
-	val1     = struct{ Message string }{Message: "MSG 1"}
-	val2     = struct{ Message string }{Message: "MSG 2"}
+	val1 = TV_{Message: "MSG 1"}
+	val2 = TV_{Message: "MSG 2"}
 )
 
 func Test_index(t *testing.T) {
@@ -279,3 +278,5 @@ func Test_cacheEntry(t *testing.T) {
 		assert.False(t, sut.expired(aTime))
 	})
 }
+
+type TV_ struct{ Message string }

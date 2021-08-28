@@ -10,7 +10,7 @@ type Cache struct {
 	lock  sync.Mutex
 }
 
-func NewCache() *Cache {
+func New() *Cache {
 	return &Cache{
 		index: makeIndex(),
 	}
@@ -142,7 +142,7 @@ func (obj *cacheEntry) expired(now time.Time) bool { return obj.expires() && obj
 
 type (
 	TK = string
-	TV = struct{ Message string }
+	TV = interface{}
 )
 
 var (
