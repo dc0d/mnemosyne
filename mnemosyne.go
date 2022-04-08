@@ -2,26 +2,25 @@ package mnemosyne
 
 import (
 	"sync"
-	"time"
 )
 
-type Cache struct {
-	index *index
+type Cache[K comparable, V any] struct {
+	index *index[K, V]
 	lock  sync.Mutex
 }
 
-func New() *Cache {
-	return &Cache{
-		index: makeIndex(),
+func New[K comparable, V any]() *Cache[K, V] {
+	return &Cache[K, V]{
+		index: makeIndex[K, V](),
 	}
 }
 
-func (obj *Cache) GetOrInit(key string, init Initializer) TV {
+func (obj *Cache[K, V]) GetOrInit(key K, init Initializer[V]) V {
 	obj.lock.Lock()
 
 	entry, found := obj.index.get(key)
 	if !found {
-		entry = &cacheEntry{}
+		entry = &cacheEntry[V]{}
 		obj.index.set(key, entry)
 	}
 
@@ -39,10 +38,10 @@ func (obj *Cache) GetOrInit(key string, init Initializer) TV {
 	return entry.value
 }
 
-func (obj *Cache) Put(key string, init Initializer) TV {
+func (obj *Cache[K, V]) Put(key K, init Initializer[V]) V {
 	obj.lock.Lock()
 
-	entry := &cacheEntry{}
+	entry := &cacheEntry[V]{}
 	obj.index.set(key, entry)
 
 	obj.lock.Unlock()
@@ -59,7 +58,7 @@ func (obj *Cache) Put(key string, init Initializer) TV {
 	return entry.value
 }
 
-func (obj *Cache) Remove(firstKey string, rest ...string) {
+func (obj *Cache[K, V]) Remove(firstKey K, rest ...K) {
 	rest = append(rest, firstKey)
 
 	obj.lock.Lock()
@@ -70,7 +69,7 @@ func (obj *Cache) Remove(firstKey string, rest ...string) {
 	}
 }
 
-func (obj *Cache) Get(key string) (val TV, found bool) {
+func (obj *Cache[K, V]) Get(key K) (val V, found bool) {
 	obj.lock.Lock()
 	defer obj.lock.Unlock()
 
@@ -82,69 +81,9 @@ func (obj *Cache) Get(key string) (val TV, found bool) {
 	return entry.value, true
 }
 
-func (obj *Cache) Evict() {
+func (obj *Cache[K, V]) Evict() {
 	obj.lock.Lock()
 	defer obj.lock.Unlock()
 
 	obj.index.evict()
 }
-
-type Initializer func() (TV, time.Duration)
-
-//
-
-type index struct{ kvstore map[TK]*cacheEntry }
-
-func makeIndex() *index {
-	return &index{
-		kvstore: make(map[TK]*cacheEntry),
-	}
-}
-
-func (obj *index) del(key TK)                  { delete(obj.kvstore, key) }
-func (obj *index) set(key TK, val *cacheEntry) { obj.kvstore[key] = val }
-func (obj *index) get(key TK) (val *cacheEntry, found bool) {
-	val, found = obj.kvstore[key]
-	if !found {
-		return
-	}
-	if val.expired(timeSource()) {
-		obj.del(key)
-		return nil, false
-	}
-	return
-}
-
-func (obj *index) evict() {
-	now := timeSource()
-	var toDelete []TK
-	for key, val := range obj.kvstore {
-		if !val.expired(now) {
-			continue
-		}
-		toDelete = append(toDelete, key)
-	}
-	for _, k := range toDelete {
-		obj.del(k)
-	}
-}
-
-//
-
-type cacheEntry struct {
-	value    TV
-	once     sync.Once
-	deadline time.Time
-}
-
-func (obj *cacheEntry) expires() bool              { return !obj.deadline.IsZero() }
-func (obj *cacheEntry) expired(now time.Time) bool { return obj.expires() && obj.deadline.Before(now) }
-
-type (
-	TK = string
-	TV = interface{}
-)
-
-var (
-	timeSource = time.Now
-)
