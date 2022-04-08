@@ -8,18 +8,18 @@ import (
 )
 
 func ExampleCache_GetOrInit() {
-	cache := mnemosyne.New()
+	cache := mnemosyne.New[string, Value]()
 
 	key := "key-1"
-	val := TV{Message: "val-1"}
+	val := Value{Message: "val-1"}
 
-	result := cache.GetOrInit(key, func() (mnemosyne.TV, time.Duration) { return val, 0 })
+	result := cache.GetOrInit(key, func() (Value, time.Duration) { return val, 0 })
 
 	fmt.Println("cached value:", result)
 
 	// performing same operation will have no effect
 	// because the value is already cached.
-	result = cache.GetOrInit(key, func() (mnemosyne.TV, time.Duration) { panic("will not be called") })
+	result = cache.GetOrInit(key, func() (Value, time.Duration) { panic("will not be called") })
 
 	fmt.Println("cached value:", result)
 
@@ -29,10 +29,10 @@ func ExampleCache_GetOrInit() {
 }
 
 func ExampleCache_put_get() {
-	cache := mnemosyne.New()
+	cache := mnemosyne.New[string, Value]()
 
 	key := "key-a1"
-	val := TV{Message: "val-a1"}
+	val := Value{Message: "val-a1"}
 
 	// at this time nothing will be found
 	result, found := cache.Get(key)
@@ -40,14 +40,14 @@ func ExampleCache_put_get() {
 
 	// this operation updates the entry and overwrites it
 	// even if it's not expired yet
-	cache.Put(key, func() (mnemosyne.TV, time.Duration) { return val, 0 })
+	cache.Put(key, func() (Value, time.Duration) { return val, 0 })
 
 	result, found = cache.Get(key)
 	fmt.Println(result, found)
 
 	// Output:
-	// <nil> false
+	// {} false
 	// {val-a1} true
 }
 
-type TV struct{ Message string }
+type Value struct{ Message string }
