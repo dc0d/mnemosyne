@@ -6,13 +6,16 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/dc0d/mnemosyne/internal/support"
+	"github.com/dc0d/mnemosyne/internal/testsupport"
 )
 
 //nolint:funlen
 func TestCache(t *testing.T) {
-	t.Run(`should cache when calling GetOrInit`, func(t *testing.T) {
+	t.Run(`should cache when calling GetOrInit`, PreserveTimeSource(func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
-		timeSource = func() time.Time { return now }
+		support.TimeSource = func() time.Time { return now }
 		sut := New[string, Value]()
 
 		expectedValue := val1
@@ -21,11 +24,11 @@ func TestCache(t *testing.T) {
 		})
 
 		assert.Equal(t, expectedValue, actualValue)
-	})
+	}))
 
-	t.Run(`should not overwrite after cached by calling GetOrInit`, func(t *testing.T) {
+	t.Run(`should not overwrite after cached by calling GetOrInit`, PreserveTimeSource(func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
-		timeSource = func() time.Time { return now }
+		support.TimeSource = func() time.Time { return now }
 		sut := New[string, Value]()
 
 		initialValue := val1
@@ -41,10 +44,10 @@ func TestCache(t *testing.T) {
 		})
 
 		assert.Equal(t, initialValue, actualValue)
-	})
+	}))
 
-	t.Run(`should evict expired entry by calling Get - initialized by GetOrInit`, func(t *testing.T) {
-		timeSource = time.Now
+	t.Run(`should evict expired entry by calling Get - initialized by GetOrInit`, PreserveTimeSource(func(t *testing.T) {
+		support.TimeSource = time.Now
 		sut := New[string, Value]()
 
 		initialValue := val1
@@ -61,43 +64,46 @@ func TestCache(t *testing.T) {
 			_, found := sut.Get(key1)
 			return !found
 		}, time.Millisecond*300, time.Millisecond*20)
-	})
+	}))
 
-	t.Run(`should cache when calling Put`, func(t *testing.T) {
+	t.Run(`should cache when calling Put`, PreserveTimeSource(func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
-		timeSource = func() time.Time { return now }
+		support.TimeSource = func() time.Time { return now }
 		sut := New[string, Value]()
 
 		expectedValue := val1
 		sut.Put(key1, func() (Value, time.Duration) {
 			return expectedValue, 0
 		})
+		actual, _ := sut.index.Get(key1)
 
-		assert.Equal(t, expectedValue, sut.index.kvstore[key1].value)
-	})
+		assert.Equal(t, expectedValue, actual.Value())
+	}))
 
-	t.Run(`should overwrite after cached by calling Put`, func(t *testing.T) {
+	t.Run(`should overwrite after cached by calling Put`, PreserveTimeSource(func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
-		timeSource = func() time.Time { return now }
+		support.TimeSource = func() time.Time { return now }
 		sut := New[string, Value]()
 
 		initialValue := val1
 		sut.Put(key1, func() (Value, time.Duration) {
 			return initialValue, 0
 		})
+		actual, _ := sut.index.Get(key1)
 
-		assert.Equal(t, initialValue, sut.index.kvstore[key1].value)
+		assert.Equal(t, initialValue, actual.Value())
 
 		changedValue := val2
 		sut.Put(key1, func() (Value, time.Duration) {
 			return changedValue, 0
 		})
+		actual, _ = sut.index.Get(key1)
 
-		assert.Equal(t, changedValue, sut.index.kvstore[key1].value)
-	})
+		assert.Equal(t, changedValue, actual.Value())
+	}))
 
-	t.Run(`should evict expired entry by calling Get - initialized by Put`, func(t *testing.T) {
-		timeSource = time.Now
+	t.Run(`should evict expired entry by calling Get - initialized by Put`, PreserveTimeSource(func(t *testing.T) {
+		support.TimeSource = time.Now
 		sut := New[string, Value]()
 
 		initialValue := val1
@@ -114,21 +120,21 @@ func TestCache(t *testing.T) {
 			result, _ := sut.Get(key1)
 			return result == Value{}
 		}, time.Millisecond*300, time.Millisecond*20)
-	})
+	}))
 
-	t.Run(`should return not found when not cached when calling Get`, func(t *testing.T) {
+	t.Run(`should return not found when not cached when calling Get`, PreserveTimeSource(func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
-		timeSource = func() time.Time { return now }
+		support.TimeSource = func() time.Time { return now }
 		sut := New[string, Value]()
 
 		_, found := sut.Get(key1)
 
 		assert.False(t, found)
-	})
+	}))
 
-	t.Run(`should find the entry when already cached when calling Get`, func(t *testing.T) {
+	t.Run(`should find the entry when already cached when calling Get`, PreserveTimeSource(func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
-		timeSource = func() time.Time { return now }
+		support.TimeSource = func() time.Time { return now }
 		sut := New[string, Value]()
 
 		expectedValue := val1
@@ -140,11 +146,11 @@ func TestCache(t *testing.T) {
 
 		assert.True(t, found)
 		assert.Equal(t, expectedValue, val)
-	})
+	}))
 
-	t.Run(`should return not found when entry is removed when calling Get`, func(t *testing.T) {
+	t.Run(`should return not found when entry is removed when calling Get`, PreserveTimeSource(func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
-		timeSource = func() time.Time { return now }
+		support.TimeSource = func() time.Time { return now }
 		sut := New[string, Value]()
 
 		expectedValue := val1
@@ -163,11 +169,11 @@ func TestCache(t *testing.T) {
 
 		assert.False(t, found)
 		assert.Equal(t, Value{}, val)
-	})
+	}))
 
-	t.Run(`should be fine calling Remove with a non-existing key`, func(t *testing.T) {
+	t.Run(`should be fine calling Remove with a non-existing key`, PreserveTimeSource(func(t *testing.T) {
 		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
-		timeSource = func() time.Time { return now }
+		support.TimeSource = func() time.Time { return now }
 		sut := New[string, Value]()
 
 		sut.Remove(key1)
@@ -188,10 +194,10 @@ func TestCache(t *testing.T) {
 
 		assert.False(t, found)
 		assert.Equal(t, Value{}, val)
-	})
+	}))
 
-	t.Run(`should evict expired entries`, func(t *testing.T) {
-		timeSource = time.Now
+	t.Run(`should evict expired entries`, PreserveTimeSource(func(t *testing.T) {
+		support.TimeSource = time.Now
 		sut := New[string, Value]()
 
 		for i := 1; i <= 10; i++ {
@@ -218,7 +224,7 @@ func TestCache(t *testing.T) {
 			}
 			return result
 		}, time.Millisecond*300, time.Millisecond*20)
-	})
+	}))
 }
 
 const (
@@ -230,53 +236,6 @@ var (
 	val2 = Value{Message: "MSG 2"}
 )
 
-func Test_index(t *testing.T) {
-	t.Run(`should evict on get`, func(t *testing.T) {
-		now := time.Date(2021, 8, 25, 20, 30, 0, 0, time.Local)
-		timeSource = func() time.Time { return now }
-		const minutes = 10
-		sut := makeIndex[string, Value]()
-		expected := makeIndex[string, Value]()
-		for i := -1 * minutes; i <= minutes; i++ {
-			deadline := now.Add(time.Minute * time.Duration(i))
-			key := fmt.Sprint(i)
-			entry := &cacheEntry[Value]{deadline: deadline}
-			sut.set(key, entry)
+type Value = testsupport.Value
 
-			if deadline.Before(now) {
-				continue
-			}
-
-			expected.set(key, entry)
-		}
-
-		for i := -1 * minutes; i <= minutes; i++ {
-			key := fmt.Sprint(i)
-
-			sut.get(key)
-		}
-
-		want := fmt.Sprint(expected)
-		got := fmt.Sprint(sut)
-
-		assert.Equal(t, want, got)
-	})
-}
-
-func Test_cacheEntry(t *testing.T) {
-	t.Run(`expires`, func(t *testing.T) {
-		sut := &cacheEntry[Value]{}
-
-		assert.False(t, sut.expires())
-	})
-
-	t.Run(`expired`, func(t *testing.T) {
-		sut := &cacheEntry[Value]{}
-
-		aTime := time.Now()
-
-		assert.False(t, sut.expired(aTime))
-	})
-}
-
-type Value struct{ Message string }
+var PreserveTimeSource = testsupport.PreserveTimeSource
