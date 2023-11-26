@@ -69,7 +69,6 @@ linters:
   disable-all: true
   enable:
     - bodyclose
-    - deadcode
     - depguard
     - dogsled
     - dupl
@@ -96,13 +95,11 @@ linters:
     - nolintlint
     - rowserrcheck
     - staticcheck
-    - structcheck
     - stylecheck
     - typecheck
     - unconvert
     - unparam
     - unused
-    - varcheck
     - whitespace
 
   # don't enable:
@@ -121,6 +118,9 @@ linters:
   # - revive
   # - wsl
   # - golint
+  # - structcheck
+  # - deadcode
+  # - varcheck
 
 issues:
   # Excluding configuration per-path, per-linter, per-text and per-source
@@ -132,4 +132,4 @@ issues:
     # https://github.com/go-critic/go-critic/issues/926
     - linters:
         - gocritic
-      text: "unnecessaryDefer:"
+      text: 'unnecessaryDefer:'
